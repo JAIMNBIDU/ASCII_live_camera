@@ -52,7 +52,7 @@ cd ascii-camera
 pip install -r requirements.txt
 
 # Run
-python3 ascii_live_simple.py
+python3 live_to_ascii.py
 Press Q to quit.
 ```
 ## 🔧 Configuration
