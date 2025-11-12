@@ -1,90 +1,87 @@
-🎥 Real-Time ASCII Camera
+<div align="center">
 
-Turn your webcam feed into live ASCII art — directly in Python.
+# 🎥 Real-Time ASCII Camera  
+**Turn your webcam feed into live ASCII art — in real time.**
 
-Converts every video frame into ASCII characters in real time using OpenCV and NumPy.
-Optionally colorized, runs at 25–40 FPS, and fully customizable.
+Converts every frame from your webcam into ASCII characters using **Python**, **OpenCV**, and **NumPy**.  
+Runs smoothly at 25–40 FPS with optional color rendering.
 
-🧠 Overview
+![screenshot](https://user-images.githubusercontent.com/00000000/placeholder-demo.gif)
 
-This project transforms your webcam feed into ASCII art dynamically.
-Each frame is:
+</div>
 
-Captured from your webcam
-Downscaled to a small grid
-Converted to grayscale
-Mapped to ASCII symbols by brightness
-Drawn as text and displayed live
+---
 
-The result? A live ASCII mirror of your surroundings — fast, mesmerizing, and slightly retro.
+## 🧭 Overview
+Each frame from your camera is:
 
-✨ Features
-🧩 Real-time webcam feed → ASCII conversion
-🎨 Optional colored ASCII mode
-⚙️ Adjustable resolution, brightness, and FPS
-💨 Threaded capture for smooth, lag-free output
+1. Captured from the webcam  
+2. Downscaled to a coarse grid  
+3. Converted to grayscale  
+4. Mapped to ASCII symbols based on brightness  
+5. Drawn as text and displayed live  
 
-⚙️ Tech Stack
-Component	Purpose
-Python 3.10+	Core language
-OpenCV	Video capture, drawing, and display
-NumPy	Pixel-level math and mapping
-Threading	Asynchronous camera input
+Result: a **real-time ASCII mirror** — fast, fluid, and strangely hypnotic.
 
-🧩 Installation
+---
+
+## ✨ Features
+- 🧩 Real-time webcam → ASCII conversion  
+- 🎨 Optional **colorized** mode  
+- ⚙️ Adjustable resolution, brightness & FPS  
+- 💨 Threaded capture for lag-free performance  
+- 🧱 Minimal, well-commented Python code  
+
+---
+
+## ⚙️ Tech Stack
+| Tool | Purpose |
+|------|----------|
+| **Python 3.10+** | Core language |
+| **OpenCV** | Video capture & rendering |
+| **NumPy** | Matrix & pixel math |
+| **Threading** | Async frame capture |
+
+---
+
+## 🧩 Installation
+```bash
 git clone https://github.com/<your-username>/ascii-camera.git
 cd ascii-camera
 pip install -r requirements.txt
 
-🚀 Run
-python ascii_live_simple.py
-Press Q to quit the window.
+# Run
+python3 ascii_live_simple.py
+Press Q to quit.
+```
+## 🔧 Configuration
 
-🔧 Configuration
-Variable	Description	Default
-NUM_COLS	ASCII resolution (more = sharper)	160
-DARK_LIMIT	Brightness cutoff for blank pixels	25
-USE_COLOR	Toggle color mode	True
-FONT_SCALE	Character size	0.35
-FONT_THICKNESS	Boldness of ASCII text	1
+| Variable | Meaning | Default |
+|:----------|:---------|:--------|
+| `NUM_COLS` | ASCII resolution (columns) | `160` |
+| `DARK_LIMIT` | Brightness cutoff for blank cells | `25` |
+| `USE_COLOR` | Enable colorized ASCII | `True` |
+| `FONT_SCALE` | Character size | `0.35` |
+| `FONT_THICKNESS` | Text boldness | `1` |
 
-🖥️ Example Output
-Monochrome ASCII:
-@@@@@@@@@@@@@%%########**+=--::::........
-@@@@@@@@@%%%%#####**++==--::::...........
-@@@@@@%%%%####**++==--::::...............
-@@@@%%%%###**++==--::::..................
+```
+🧠 How It Works
+Capture – threaded video input
+Resize – compress frame → grid
+Map – convert brightness → ASCII index
+Draw – render characters with OpenCV
+Display – show output with FPS overlay
 
-Color Mode (live view):
-Each ASCII symbol tinted by the pixel color of your webcam feed.
-
-🧩 How It Works
-Capture – Camera feed is read continuously on a background thread.
-Resize – Image is scaled to a small grid where each pixel = 1 ASCII char.
-Map – Brightness values mapped to characters in " .:-=+*#%@".
-Draw – Each character drawn with OpenCV’s putText() (optionally colored).
-Display – The ASCII-rendered frame is shown live with FPS overlay.
-
-⚡ Performance Tips
-Goal	Adjustment
-🏎️ More FPS	Decrease NUM_COLS
-🔍 Sharper Detail	Increase NUM_COLS
-🌑 Cleaner Blacks	Raise DARK_LIMIT
-⚪ Faster Rendering	Set USE_COLOR = False
-
-
- Side-by-side original + ASCII display
- Save ASCII video output (.mp4)
- Web streaming via Flask
- Emoji or Unicode art mode
- GPU / OpenGL accelerated renderer
 
 📁 Project Structure
+python
+Copy code
 ascii-camera/
-├── ascii_live_simple.py     # Main source code
-├── requirements.txt         # Dependencies
-└── README.md                # Documentation
+├── ascii_live_simple.py     # main program
+├── requirements.txt         # dependencies
+└── README.md                # documentation
 
-🧑‍💻 Author
-Aryan(JAIMNBIDu)
-Built with Python, OpenCV, and too many caffeine molecules.
+
+Author
+Aryan (JAIMNBIDU)
+Built with Python, OpenCV, too mauch caffeine and quite a lot of free time.  
