@@ -46,6 +46,7 @@ Result: a **real-time ASCII mirror** — fast, fluid, and strangely hypnotic.
 
 ## 🧩 Installation
 ```bash
+# Clone the repo
 git clone https://github.com/<your-username>/ascii-camera.git
 cd ascii-camera
 pip install -r requirements.txt
