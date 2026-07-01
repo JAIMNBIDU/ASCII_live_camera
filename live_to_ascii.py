@@ -1,122 +1,214 @@
-import cv2
-import numpy as np
-import time
+#!/usr/bin/env python3
+"""
+ascii_cam.py — live webcam feed rendered as detailed color ASCII in the terminal.
+
+Requires: opencv-python, numpy
+    pip install opencv-python numpy
+
+Run:
+    python3 ascii_cam.py
+
+Controls (Linux/macOS terminal, raw key read — no GUI window needed):
+    q          -> quit
+    c          -> toggle color on/off
+    [ / ]      -> decrease / increase output width (detail level)
+"""
+
+import sys
+import os
+import shutil
 import threading
 
-# ---------- SETTINGS ----------
-CAMERA_ID = 0
-NUM_COLS = 160               # number of ASCII columns (increase for more detail)
-DARK_LIMIT = 25              # darker than this = blank
-ASCII_CHARS = list(" .:-=+*#%@")
-USE_COLOR = True             # True = colored ASCII, False = white text
-FONT_TYPE = cv2.FONT_HERSHEY_SIMPLEX
-FONT_SCALE = 0.35
-FONT_THICKNESS = 1
+import cv2
+import numpy as np
+
+IS_WINDOWS = sys.platform.startswith("win")
+
+if IS_WINDOWS:
+    import msvcrt
+else:
+    import select
+    import termios
+    import tty
+
+ASCII_RAMP = (
+    " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
+)
+
+state = {
+    "color": True,
+    "width": None,
+    "quit": False,
+}
+state_lock = threading.Lock()
 
 
-class CameraThread(threading.Thread):
-    def __init__(self, camera_id=0):
-        super().__init__(daemon=True)
-        self.camera = cv2.VideoCapture(camera_id)
-        if not self.camera.isOpened():
-            raise RuntimeError("Cannot open camera")
-        self.lock = threading.Lock()
-        self.frame = None
-        self.running = True
-
-    def run(self):
-        while self.running:
-            ok, frame = self.camera.read()
-            if not ok:
-                continue
-            with self.lock:
-                self.frame = frame
-
-    def get_frame(self):
-        with self.lock:
-            return None if self.frame is None else self.frame.copy()
-
-    def stop(self):
-        self.running = False
-        self.camera.release()
+def get_terminal_size(default_cols=200):
+    size = shutil.get_terminal_size(fallback=(default_cols, 50))
+    return size.columns, size.lines
 
 
-def convert_frame_to_ascii(frame, cols):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    height, width = gray.shape
+def key_listener():
+    """Reads single keypresses from stdin, no Enter needed. Cross-platform."""
+    if IS_WINDOWS:
+        while True:
+            with state_lock:
+                if state["quit"]:
+                    return
+            if msvcrt.kbhit():
+                ch = msvcrt.getwch()
+                with state_lock:
+                    if ch == 'q':
+                        state["quit"] = True
+                        return
+                    elif ch == 'c':
+                        state["color"] = not state["color"]
+                    elif ch == '[':
+                        state["width"] = max(20, (state["width"] or 100) - 10)
+                    elif ch == ']':
+                        state["width"] = min(400, (state["width"] or 100) + 10)
+            else:
+                threading.Event().wait(0.05)
+        return
 
-    char_w, char_h = 8, 16
-    rows = int(cols * (height / width) * (char_w / char_h))
-    small_gray = cv2.resize(gray, (cols, rows), interpolation=cv2.INTER_AREA)
+    # Unix/Linux/macOS: raw-mode stdin read
+    fd = sys.stdin.fileno()
+    try:
+        old_settings = termios.tcgetattr(fd)
+    except termios.error:
+        return  # not a real tty (e.g. piped input) — skip listener
 
-    num_chars = len(ASCII_CHARS)
-    brightness_index = (small_gray / 255 * (num_chars - 1)).astype(np.int32)
+    try:
+        tty.setcbreak(fd)
+        while True:
+            with state_lock:
+                if state["quit"]:
+                    return
+            r, _, _ = select.select([fd], [], [], 0.1)
+            if r:
+                ch = sys.stdin.read(1)
+                with state_lock:
+                    if ch == 'q':
+                        state["quit"] = True
+                        return
+                    elif ch == 'c':
+                        state["color"] = not state["color"]
+                    elif ch == '[':
+                        state["width"] = max(20, (state["width"] or 100) - 10)
+                    elif ch == ']':
+                        state["width"] = min(400, (state["width"] or 100) + 10)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-    if USE_COLOR:
-        small_color = cv2.resize(frame, (cols, rows), interpolation=cv2.INTER_AREA)
 
-    output_height = rows * char_h
-    output_width = cols * char_w
-    output = np.zeros((output_height, output_width, 3), dtype=np.uint8)
+def frame_to_ascii(frame, out_width, color=True):
+    h, w = frame.shape[:2]
+    char_aspect = 0.55
+    out_height = max(1, int((out_width / w) * h * char_aspect))
 
-    for row in range(rows):
-        for col in range(cols):
-            brightness = small_gray[row, col]
-            if brightness < DARK_LIMIT:
-                continue
-            char = ASCII_CHARS[brightness_index[row, col]]
-            color = (255, 255, 255)
-            if USE_COLOR:
-                b, g, r = small_color[row, col]
-                color = (int(b), int(g), int(r))
-            cv2.putText(
-                output,
-                char,
-                (int(col * char_w), int((row + 1) * char_h - 2)),
-                FONT_TYPE,
-                FONT_SCALE,
-                color,
-                FONT_THICKNESS,
-                cv2.LINE_AA
-            )
+    small = cv2.resize(frame, (out_width, out_height), interpolation=cv2.INTER_AREA)
+    gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
 
-    return output
+    ramp_len = len(ASCII_RAMP) - 1
+    idx = (gray.astype(np.float32) / 255.0 * ramp_len).astype(np.uint8)
+
+    out_lines = []
+
+    if color:
+        bgr = small
+        for y in range(out_height):
+            parts = []
+            prev_color = None
+            run_chars = []
+            for x in range(out_width):
+                b, g, r = bgr[y, x]
+                cur_color = (r, g, b)
+                ch = ASCII_RAMP[idx[y, x]]
+                if cur_color != prev_color:
+                    if run_chars:
+                        parts.append("".join(run_chars))
+                    parts.append(f"\x1b[38;2;{r};{g};{b}m")
+                    run_chars = [ch]
+                    prev_color = cur_color
+                else:
+                    run_chars.append(ch)
+            if run_chars:
+                parts.append("".join(run_chars))
+            out_lines.append("".join(parts) + "\x1b[0m")
+    else:
+        for y in range(out_height):
+            row = "".join(ASCII_RAMP[idx[y, x]] for x in range(out_width))
+            out_lines.append(row)
+
+    return "\n".join(out_lines)
 
 
 def main():
-    cam_thread = CameraThread(CAMERA_ID)
-    cam_thread.start()
-    time.sleep(0.1)
+    print("Opening camera... (first run / mode switch can take a couple seconds)")
 
-    prev_time = time.time()
-    smooth_fps = 0.0
+    # Explicit V4L2 backend + MJPG fourcc: skips OpenCV's slower backend probing
+    # and gets the camera into its fast native USB format instead of raw YUYV,
+    # which is what causes the multi-second hang on many webcams.
+    if sys.platform.startswith("linux"):
+        cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
+    elif IS_WINDOWS:
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    else:
+        cap = cv2.VideoCapture(0)
 
-    cv2.namedWindow("ASCII Camera", cv2.WINDOW_NORMAL)
+    if not cap.isOpened():
+        print("Could not open webcam (index 0). Try a different index or check permissions.")
+        sys.exit(1)
+
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
+    # Warm-up read: first frame(s) after a mode switch are sometimes stale/black,
+    # this also absorbs the negotiation delay before we clear the screen so the
+    # visible "wait" happens next to a message instead of a blank terminal.
+    cap.read()
+
+    cols, _ = get_terminal_size()
+    with state_lock:
+        state["width"] = max(40, cols - 2)
+
+    listener = threading.Thread(target=key_listener, daemon=True)
+    listener.start()
+
+    os.system("clear")
+    print("\x1b[?25l", end="")  # hide cursor
 
     try:
         while True:
-            frame = cam_thread.get_frame()
-            if frame is None:
-                continue
+            with state_lock:
+                if state["quit"]:
+                    break
+                color = state["color"]
+                out_width = state["width"]
 
-            ascii_frame = convert_frame_to_ascii(frame, NUM_COLS)
-
-            # FPS counter
-            current_time = time.time()
-            delta = current_time - prev_time
-            prev_time = current_time
-            if delta > 0:
-                smooth_fps = 0.9 * smooth_fps + 0.1 * (1 / delta)
-            cv2.putText(ascii_frame, f"{smooth_fps:.1f} FPS", (10, 25),
-                        FONT_TYPE, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
-
-            cv2.imshow("ASCII Camera", ascii_frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            ret, frame = cap.read()
+            if not ret:
+                print("Failed to grab frame.")
                 break
 
+            frame = cv2.flip(frame, 1)
+            ascii_frame = frame_to_ascii(frame, out_width, color=color)
+
+            # Cursor home + clear from cursor to end of screen: removes
+            # leftover artifact lines when frame size/width changes.
+            sys.stdout.write("\x1b[H\x1b[J")
+            sys.stdout.write(ascii_frame)
+            sys.stdout.flush()
+
+    except KeyboardInterrupt:
+        pass
     finally:
-        cam_thread.stop()
-        cv2.destroyAllWindows()
+        with state_lock:
+            state["quit"] = True
+        cap.release()
+        print("\x1b[0m\x1b[?25h")  # reset color, show cursor
+        os.system("clear")
 
 
 if __name__ == "__main__":
