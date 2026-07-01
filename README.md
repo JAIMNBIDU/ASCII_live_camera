@@ -6,7 +6,6 @@
 Converts every frame from your webcam into ASCII characters using **Python**, **OpenCV**, and **NumPy**.  
 Runs smoothly at 25–40 FPS with optional color rendering.
 
-![screenshot](https://user-images.githubusercontent.com/00000000/placeholder-demo.gif)
 
 </div>
 
@@ -47,7 +46,7 @@ Result: a **real-time ASCII mirror** — fast, fluid, and strangely hypnotic.
 ## 🧩 Installation
 ```bash
 # Clone the repo
-git clone https://github.com/<your-username>/ascii-camera.git
+git clone https://github.com/JAIMNBIDU/ascii-camera.git
 cd ascii-camera
 pip install -r requirements.txt
 
