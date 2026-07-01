@@ -1,87 +1,36 @@
-<div align="center">
+# ascii-cam
 
-# 🎥 Real-Time ASCII Camera  
-**Turn your webcam feed into live ASCII art — in real time.**
+Live webcam feed rendered as detailed, colored ASCII directly in your terminal. No GUI window — just raw text.
 
-Converts every frame from your webcam into ASCII characters using **Python**, **OpenCV**, and **NumPy**.  
-Runs smoothly at 25–40 FPS with optional color rendering.
+92-level gradient instead of the usual lazy 10-char ramp, plus true 24-bit color per character, so it actually holds detail instead of looking like a fax.
 
-
-</div>
-
----
-
-## 🧭 Overview
-Each frame from your camera is:
-
-1. Captured from the webcam  
-2. Downscaled to a coarse grid  
-3. Converted to grayscale  
-4. Mapped to ASCII symbols based on brightness  
-5. Drawn as text and displayed live  
-
-Result: a **real-time ASCII mirror** — fast, fluid, and strangely hypnotic.
-
----
-
-## ✨ Features
-- 🧩 Real-time webcam → ASCII conversion  
-- 🎨 Optional **colorized** mode  
-- ⚙️ Adjustable resolution, brightness & FPS  
-- 💨 Threaded capture for lag-free performance  
-- 🧱 Minimal, well-commented Python code  
-
----
-
-## ⚙️ Tech Stack
-| Tool | Purpose |
-|------|----------|
-| **Python 3.10+** | Core language |
-| **OpenCV** | Video capture & rendering |
-| **NumPy** | Matrix & pixel math |
-| **Threading** | Async frame capture |
-
----
-
-## 🧩 Installation
-```bash
-# Clone the repo
-git clone https://github.com/JAIMNBIDU/ascii-camera.git
-cd ascii-camera
-pip install -r requirements.txt
-
-# Run
-python3 live_to_ascii.py
-Press Q to quit.
-```
-## 🔧 Configuration
-
-| Variable | Meaning | Default |
-|:----------|:---------|:--------|
-| `NUM_COLS` | ASCII resolution (columns) | `160` |
-| `DARK_LIMIT` | Brightness cutoff for blank cells | `25` |
-| `USE_COLOR` | Enable colorized ASCII | `True` |
-| `FONT_SCALE` | Character size | `0.35` |
-| `FONT_THICKNESS` | Text boldness | `1` |
+## Requirements
 
 ```
-🧠 How It Works
-Capture – threaded video input
-Resize – compress frame → grid
-Map – convert brightness → ASCII index
-Draw – render characters with OpenCV
-Display – show output with FPS overlay
+pip install opencv-python numpy
+```
 
+## Run
 
-📁 Project Structure
-python
-Copy code
-ascii-camera/
-├── ascii_live_simple.py     # main program
-├── requirements.txt         # dependencies
-└── README.md                # documentation
+```
+python3 ascii_cam.py
+```
 
+## Controls
 
-Author
-Aryan (JAIMNBIDU)
-Built with Python, OpenCV, too mauch caffeine and quite a lot of free time.  
+| Key | Action |
+|-----|--------|
+| `q` | Quit |
+| `c` | Toggle color on/off |
+| `[` | Decrease detail (smaller width) |
+| `]` | Increase detail (larger width) |
+
+No Enter needed — keys register instantly. Works on Linux, macOS, and Windows.
+
+## Notes
+
+- First launch can take a couple seconds — that's the camera negotiating resolution/format, not the script hanging.
+- Color mode is heavier on the terminal at high width. Drop color or shrink width with `[` if it feels laggy.
+
+---
+JAIMNBIDU
